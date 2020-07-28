@@ -1,44 +1,69 @@
 import React, { useState, useEffect } from "react";
-import "./App.css";
 import Months from "./Months";
 import Users from "./Users";
+import { fetchUsers } from "./utils/fetchUsers";
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
-  const [Failure, setFailure] = useState("");
+  const [failure, setFailure] = useState("");
   const [users, setUsers] = useState([]);
-  
+  const [monthUsers, setMonthUsers] = useState({
+    month: undefined,
+    qty: 0,
+    color: undefined,
+    users: [],
+  });
+  const [monthQty, setMonthQty] = useState({});
+
+  const onHoverMonth = (newUsers) => {
+    setMonthUsers(newUsers);
+  };
+
   useEffect(() => {
     setIsLoading(true);
-    fetch("https://yalantis-react-school-api.yalantis.com/api/task0/users")
-      .then((result) => result.json())
-      .then((result) => {
-        setUsers(
-          result.map((it) => {
-            return { id: it.id, fullName: `${it.firstName} ${it.lastName}`, month: new Date(it.dob).getMonth() + 1};
-          })
-        );
-        setIsLoading(false);
+
+    fetchUsers()
+      .then((data) => {
+        const newUsers = data.map((it) => {
+          return {
+            id: it.id,
+            fullName: `${it.firstName} ${it.lastName}`,
+            month: new Date(it.dob).getMonth() + 1,
+            dob: new Date(it.dob).toLocaleDateString("en-US"),
+          };
+        });
+        const monthQty = newUsers.reduce((acc, cur) => {
+          const qty = acc[cur.month] ? acc[cur.month] : 0;
+          return { ...acc, [cur.month]: qty + 1 };
+        }, {});
+        setUsers(newUsers);
+        setMonthQty(monthQty);
       })
       .catch((error) => {
-        console.error(error);
+        console.log(error);
         setFailure(error.message);
       });
+
+    setIsLoading(false);
   }, []);
 
   if (isLoading) {
     return "Loading ...";
   }
 
-  if (Failure) {
-    return <p>Error occurs: {Failure} </p>;
+  if (failure) {
+    return <p>Error occurs: {failure} </p>;
   }
 
   return (
-    <div>
-      <header></header>
-      <Months users={users} />
-      <Users users={users} />
+    <div className="content-wrapper">
+      <Months
+        users={users}
+        monthQty={monthQty}
+        className="month-menu"
+        onHoverMonth={onHoverMonth}
+      />
+      <Users {...monthUsers} className="user-list" />
     </div>
   );
 }
